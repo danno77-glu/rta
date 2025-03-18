@@ -28,9 +28,9 @@
         const damageRows = damageData.map(record =>
           damageHeaders.map(header => {
             let value = record[header];
-            // Format photo_url to "Photo Attached" if it exists, otherwise leave it empty
+            // Keep photo_url, but provide a user-friendly representation for mail merge *and* include the raw URL
             if (header === 'photo_url') {
-              value = value ? "Photo Attached" : "";
+              value = value ? "Photo Attached" : ""; // Keep this for display in Word
             }
             // Properly escape double quotes AND enclose in double quotes.
             return `"${String(value).replace(/"/g, '""')}"`;
@@ -41,17 +41,19 @@
         // Create a single header row, combining audit and damage headers.
         // We'll prefix damage record headers to avoid collisions.
         const prefixedDamageHeaders = damageHeaders.map(header => `damage_${header}`);
-        const csvHeaders = [...auditHeaders, ...prefixedDamageHeaders].join(',') + '\n';
+        // Add a *new* header for the raw photo URL
+        const csvHeaders = [...auditHeaders, ...prefixedDamageHeaders, 'damage_photo_url_raw'].join(',') + '\n';
 
-        // Create CSV rows.  Each row will contain the audit data, followed by ONE damage record.
-        // If there are multiple damage records, there will be multiple rows with the same audit data.
         let csvRows = '';
         if (damageRows.length === 0) {
           // If no damage records, just include the audit data
           csvRows = `${auditRow.join(',')}\n`;
         } else {
-          damageRows.forEach(damageRow => {
-            csvRows += `${auditRow.join(',')},${damageRow.join(',')}\n`;
+          damageRows.forEach((damageRow, index) => {
+            // Get the *raw* photo URL for this damage record
+            const rawPhotoUrl = damageData[index].photo_url || ''; // Get the original URL
+            // Add the raw URL to the row
+            csvRows += `${auditRow.join(',')},${damageRow.join(',')},"${rawPhotoUrl.replace(/"/g, '""')}"\n`;
           });
         }
 
